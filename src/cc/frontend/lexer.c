@@ -510,7 +510,7 @@ static Token *read_num(const char **pp) {
   if (tt == TK_INTLIT) {
     const int INT_BYTES = 4;  // TODO: Detect.
     int bits = INT_BYTES * TARGET_CHAR_BIT;
-    unsigned long long threshold = 1UL << (bits - (is_unsigned ? 0 : 1));
+    unsigned long long threshold = 1ULL << (bits - (is_unsigned ? 0 : 1));
     if (val >= threshold)
       tt = TK_LONGLIT;
   }
@@ -616,8 +616,8 @@ static void *convert_str_to_wstr(const char *src, size_t *plen) {
       break;
   }
 
-  wchar_t *wstr = malloc_or_die(len * sizeof(*wstr));
-  wchar_t *q = wstr;
+  int *wstr = malloc_or_die(len * sizeof(*wstr));
+  int *q = wstr;
   for (const char *p = src;; ) {
     int c;
     p = read_utf8_char(p, &c);

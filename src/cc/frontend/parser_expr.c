@@ -145,7 +145,7 @@ static Expr *parse_member_access(Expr *target, Token *acctok) {
     Expr *p = target;
     Token *tok = acctok;
     for (int i = 0; i < stack->len; ++i) {
-      int index = (int)(long)stack->data[i];
+      int index = (int)(long long)stack->data[i];
       const MemberInfo *minfo = &type->struct_.info->members[index];
       type = qualified_type(minfo->type, type->qualifier);
       const Name *member_name = NULL;
@@ -855,7 +855,7 @@ static Expr *parse_prim(void) {
       {TK_ULONGLIT, FX_LONG, true},
       {TK_ULLONGLIT, FX_LLONG, true},
 #ifndef __NO_WCHAR
-      {TK_WCHARLIT, FX_INT, true},  // TODO: Must match with target's wchar_t
+      {TK_WCHARLIT, FX_INT, true},  // Uses 32-bit wchar_t internally
 #endif
     };
     for (int i = 0; i < (int)ARRAY_SIZE(TABLE); ++i) {
