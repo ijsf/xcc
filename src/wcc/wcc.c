@@ -36,7 +36,8 @@ static void usage(FILE *fp) {
       "  -D <label[=value]>    Define label\n"
       "  -o <filename>         Set output filename (Default: a.wasm)\n"
       "  -c                    Output object file\n"
-      "  --entry-point=<name>  Specify entry point (Defulat: _start)\n"
+      "  --entry-point=<name>  Specify entry point (Default: _start)\n"
+      "  --no-entry-point      Disable all entry points\n"
       "  --stack-size=<size>   Output object file (Default: 8192)\n"
   );
 }
@@ -206,6 +207,7 @@ typedef struct {
   enum SourceType src_type;
   uint32_t stack_size;
   bool nodefaultlibs, nostdlib, nostdinc;
+  bool no_entry_point;
 } Options;
 
 static void parse_options(int argc, char *argv[], Options *opts) {
@@ -215,6 +217,7 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     OPT_DUMP_VERSION,
     OPT_VERBOSE,
     OPT_ENTRY_POINT,
+    OPT_NO_ENTRY_POINT,
     OPT_STACK_SIZE,
     OPT_IMPORT_MODULE_NAME,
     OPT_NODEFAULTLIBS,
@@ -248,6 +251,7 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     {"-import-module-name", required_argument, OPT_IMPORT_MODULE_NAME},
     {"-verbose", no_argument, OPT_VERBOSE},
     {"-entry-point", required_argument, OPT_ENTRY_POINT},
+    {"-no-entry-point", no_argument, OPT_NO_ENTRY_POINT},
     {"-stack-size", required_argument, OPT_STACK_SIZE},
     {"-help", no_argument, OPT_HELP},
     {"-version", no_argument, OPT_VERSION},
@@ -356,6 +360,9 @@ static void parse_options(int argc, char *argv[], Options *opts) {
       break;
     case OPT_VERBOSE:
       verbose = true;
+      break;
+    case OPT_NO_ENTRY_POINT:
+      opts->no_entry_point = true;
       break;
     case OPT_ENTRY_POINT:
       opts->entry_point = optarg;
@@ -518,6 +525,7 @@ int main(int argc, char *argv[]) {
     .nodefaultlibs = false,
     .nostdlib = false,
     .nostdinc = false,
+    .no_entry_point = false,
   };
   parse_options(argc, argv, &opts);
 
@@ -538,11 +546,8 @@ int main(int argc, char *argv[]) {
   if (opts.out_type >= OutExecutable && opts.entry_point == NULL) {
     opts.entry_point = "_start";
   }
-  if (opts.entry_point != NULL && *opts.entry_point != '\0')
+  if (opts.entry_point != NULL && *opts.entry_point != '\0' && !opts.no_entry_point)
     vec_push(opts.exports, alloc_name(opts.entry_point, NULL, false));
-  if (opts.exports->len == 0 && opts.out_type >= OutExecutable) {
-    error("no exports (require -e<xxx>)\n");
-  }
 
   VERBOSES("### Exports\n");
   for (int i = 0; i < opts.exports->len; ++i) {
