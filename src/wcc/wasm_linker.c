@@ -643,6 +643,11 @@ static int resolve_symbols_wasmobj(WasmLinker *linker, WasmObj *wasmobj) {
       } else {
         table_put(&linker->defined, sym->name, (void*)sym);
         table_delete(&linker->unresolved, sym->name);
+
+        // Exported function
+        if (sym->flags & WASM_SYM_EXPORTED) {
+          vec_push(linker->exported_functions, sym->name);
+        }
       }
     }
   }
@@ -1234,6 +1239,13 @@ static void out_global_section(WasmLinker *linker) {
 }
 
 static void out_export_section(WasmLinker *linker, Vector *exports) {
+  // Add exported functions from the object files to the considered exports
+  {
+    for (int i = 0; i < linker->exported_functions->len; ++i) {
+      vec_push(exports, linker->exported_functions->data[i]);
+    }
+  }
+
   DataStorage exports_section;
   data_init(&exports_section);
   data_open_chunk(&exports_section);
@@ -1414,6 +1426,8 @@ void linker_init(WasmLinker *linker) {
 
   linker->sp_name = alloc_name(SP_NAME, NULL, false);
   linker->curbrk_name = alloc_name(BREAK_ADDRESS_NAME, NULL, false);
+
+  linker->exported_functions = new_vector();
 }
 
 bool read_wasm_obj(WasmLinker *linker, const char *filename) {

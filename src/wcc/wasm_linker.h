@@ -22,6 +22,9 @@ typedef struct {
   const Name *curbrk_name;
 
   FILE *ofp;
+
+  // Exported functions
+  Vector *exported_functions;
 } WasmLinker;
 
 void linker_init(WasmLinker *linker);

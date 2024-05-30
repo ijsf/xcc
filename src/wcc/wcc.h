@@ -42,6 +42,7 @@ typedef struct {
   int flag;
   uint32_t type_index;
   uint32_t indirect_index;
+  bool exported; // indicates a WASM exported function
 } FuncInfo;
 
 #define GVF_EXPORT      (1 << 0)

@@ -117,6 +117,10 @@ static FuncInfo *register_func_info(const Name *funcname, Function *func, VarInf
       else
         info->func_name = alloc_name(token->str.buf, token->str.buf + token->str.len - 1, false);
     }
+    // Export
+    if (table_try_get(attributes, alloc_name("export", NULL, false), (void**)&params)) {
+      info->exported = true;
+    }
   }
 
   return info;
