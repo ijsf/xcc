@@ -11,8 +11,11 @@
 // Modifies a path in-place to changes slashes to forward slashes only,
 // so it doesn't generate escape sequences in the preprocessor include generator
 char* platform_pathslashes(char* buf) {
+  if (!buf) {
+    return NULL;
+  }
   size_t i;
-  for(i = 0; i < strlen(buf); ++i) {
+  for (i = 0; i < strlen(buf); ++i) {
     if (buf[i] == '\\') {
       buf[i] = '/';
     }

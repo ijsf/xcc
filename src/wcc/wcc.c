@@ -289,6 +289,8 @@ static void parse_options(int argc, char *argv[], Options *opts) {
       show_version(NULL);
       exit(0);
     case 'o':
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       opts->ofn = optarg;
       break;
     case 'c':
@@ -308,18 +310,26 @@ static void parse_options(int argc, char *argv[], Options *opts) {
       }
       break;
     case 'I':
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       add_inc_path(INC_NORMAL, optarg);
       break;
     case OPT_ISYSTEM:
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       add_inc_path(INC_SYSTEM, optarg);
       break;
     case OPT_IDIRAFTER:
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       add_inc_path(INC_AFTER, optarg);
       break;
     case 'D':
       define_macro(optarg);
       break;
     case 'L':
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       vec_push(opts->lib_paths, optarg);
       break;
     case 'x':
@@ -456,6 +466,10 @@ static int do_compile(Options *opts) {
 
   for (int i = 0; i < opts->sources->len; ++i) {
     char *src = opts->sources->data[i];
+
+    // Ensure forward slashes for C compatibility
+    platform_pathslashes(src);
+
     const char *outfn = opts->ofn;
     if (src != NULL) {
       if (*src == '\0')
