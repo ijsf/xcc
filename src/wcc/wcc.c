@@ -39,6 +39,7 @@ static void usage(FILE *fp) {
       "  --entry-point=<name>  Specify entry point (Default: _start)\n"
       "  --no-entry-point      Disable all entry points\n"
       "  --stack-size=<size>   Output object file (Default: 8192)\n"
+      "  --allow-unresolved    Allow unresolved exports\n"
   );
 }
 
@@ -208,6 +209,7 @@ typedef struct {
   uint32_t stack_size;
   bool nodefaultlibs, nostdlib, nostdinc;
   bool no_entry_point;
+  bool allow_unresolved;
 } Options;
 
 static void parse_options(int argc, char *argv[], Options *opts) {
@@ -225,6 +227,7 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     OPT_NOSTDINC,
     OPT_ISYSTEM,
     OPT_IDIRAFTER,
+    OPT_ALLOW_UNRESOLVED,
 
     OPT_WARNING,
     OPT_OPTIMIZE,
@@ -256,6 +259,7 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     {"-help", no_argument, OPT_HELP},
     {"-version", no_argument, OPT_VERSION},
     {"dumpversion", no_argument, OPT_DUMP_VERSION},
+    {"-allow-unresolved", no_argument, OPT_ALLOW_UNRESOLVED},
 
     // Suppress warnings
     {"O", required_argument, OPT_OPTIMIZE},
@@ -377,6 +381,9 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     case OPT_ENTRY_POINT:
       opts->entry_point = optarg;
       break;
+    case OPT_ALLOW_UNRESOLVED:
+      opts->allow_unresolved = true;
+      break;
     case '?':
       if (strcmp(argv[optind - 1], "-") == 0) {
         if (opts->src_type == UnknownSource) {
@@ -445,6 +452,7 @@ static int do_link(Vector *obj_files, Options *opts) {
   WasmLinker linker_body;
   WasmLinker *linker = &linker_body;
   linker_init(linker);
+  linker->allow_unresolved = opts->allow_unresolved;
 
   for (int i = 0; i < obj_files->len; ++i) {
     const char *objfn = obj_files->data[i];
@@ -540,6 +548,7 @@ int main(int argc, char *argv[]) {
     .nostdlib = false,
     .nostdinc = false,
     .no_entry_point = false,
+    .allow_unresolved = false,
   };
   parse_options(argc, argv, &opts);
 

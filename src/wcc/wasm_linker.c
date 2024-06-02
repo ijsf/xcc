@@ -714,6 +714,17 @@ static bool resolve_symbols(WasmLinker *linker) {
         sym->combined_index = unresolved_func_count++;
         break;
       }
+      // Check if unresolved functions are allowed
+      if (linker->allow_unresolved) {
+        if (verbose) {
+          if (sym->module_name != NULL)
+            fprintf(stderr, "Allowed unresolved function: %.*s.%.*s\n", NAMES(sym->module_name), NAMES(name));
+          else
+            fprintf(stderr, "Allowed unresolved function: %.*s\n", NAMES(name));
+        }
+        sym->combined_index = unresolved_func_count++;
+        break;
+      }
 
       if (sym->module_name != NULL)
         fprintf(stderr, "Unresolved: %.*s.%.*s\n", NAMES(sym->module_name), NAMES(name));
@@ -1427,6 +1438,7 @@ void linker_init(WasmLinker *linker) {
   linker->sp_name = alloc_name(SP_NAME, NULL, false);
   linker->curbrk_name = alloc_name(BREAK_ADDRESS_NAME, NULL, false);
 
+  linker->allow_unresolved = false;
   linker->exported_functions = new_vector();
 }
 

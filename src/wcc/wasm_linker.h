@@ -23,6 +23,9 @@ typedef struct {
 
   FILE *ofp;
 
+  // Allow unresolved exports
+  bool allow_unresolved;
+
   // Exported functions
   Vector *exported_functions;
 } WasmLinker;
