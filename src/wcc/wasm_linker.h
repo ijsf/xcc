@@ -22,6 +22,12 @@ typedef struct {
   const Name *curbrk_name;
 
   FILE *ofp;
+
+  // Allow unresolved exports
+  bool allow_unresolved;
+
+  // Exported functions
+  Vector *exported_functions;
 } WasmLinker;
 
 void linker_init(WasmLinker *linker);

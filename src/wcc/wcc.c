@@ -36,8 +36,10 @@ static void usage(FILE *fp) {
       "  -D <label[=value]>    Define label\n"
       "  -o <filename>         Set output filename (Default: a.wasm)\n"
       "  -c                    Output object file\n"
-      "  --entry-point=<name>  Specify entry point (Defulat: _start)\n"
+      "  --entry-point=<name>  Specify entry point (Default: _start)\n"
+      "  --no-entry-point      Disable all entry points\n"
       "  --stack-size=<size>   Output object file (Default: 8192)\n"
+      "  --allow-unresolved    Allow unresolved exports\n"
   );
 }
 
@@ -206,6 +208,8 @@ typedef struct {
   enum SourceType src_type;
   uint32_t stack_size;
   bool nodefaultlibs, nostdlib, nostdinc;
+  bool no_entry_point;
+  bool allow_unresolved;
 } Options;
 
 static void parse_options(int argc, char *argv[], Options *opts) {
@@ -215,6 +219,7 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     OPT_DUMP_VERSION,
     OPT_VERBOSE,
     OPT_ENTRY_POINT,
+    OPT_NO_ENTRY_POINT,
     OPT_STACK_SIZE,
     OPT_IMPORT_MODULE_NAME,
     OPT_NODEFAULTLIBS,
@@ -222,6 +227,7 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     OPT_NOSTDINC,
     OPT_ISYSTEM,
     OPT_IDIRAFTER,
+    OPT_ALLOW_UNRESOLVED,
 
     OPT_WARNING,
     OPT_OPTIMIZE,
@@ -248,10 +254,12 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     {"-import-module-name", required_argument, OPT_IMPORT_MODULE_NAME},
     {"-verbose", no_argument, OPT_VERBOSE},
     {"-entry-point", required_argument, OPT_ENTRY_POINT},
+    {"-no-entry-point", no_argument, OPT_NO_ENTRY_POINT},
     {"-stack-size", required_argument, OPT_STACK_SIZE},
     {"-help", no_argument, OPT_HELP},
     {"-version", no_argument, OPT_VERSION},
     {"dumpversion", no_argument, OPT_DUMP_VERSION},
+    {"-allow-unresolved", no_argument, OPT_ALLOW_UNRESOLVED},
 
     // Suppress warnings
     {"O", required_argument, OPT_OPTIMIZE},
@@ -285,6 +293,8 @@ static void parse_options(int argc, char *argv[], Options *opts) {
       show_version(NULL);
       exit(0);
     case 'o':
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       opts->ofn = optarg;
       break;
     case 'c':
@@ -304,18 +314,26 @@ static void parse_options(int argc, char *argv[], Options *opts) {
       }
       break;
     case 'I':
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       add_inc_path(INC_NORMAL, optarg);
       break;
     case OPT_ISYSTEM:
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       add_inc_path(INC_SYSTEM, optarg);
       break;
     case OPT_IDIRAFTER:
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       add_inc_path(INC_AFTER, optarg);
       break;
     case 'D':
       define_macro(optarg);
       break;
     case 'L':
+      // Ensure forward slashes for C compatibility
+      platform_pathslashes(optarg);
       vec_push(opts->lib_paths, optarg);
       break;
     case 'x':
@@ -357,8 +375,14 @@ static void parse_options(int argc, char *argv[], Options *opts) {
     case OPT_VERBOSE:
       verbose = true;
       break;
+    case OPT_NO_ENTRY_POINT:
+      opts->no_entry_point = true;
+      break;
     case OPT_ENTRY_POINT:
       opts->entry_point = optarg;
+      break;
+    case OPT_ALLOW_UNRESOLVED:
+      opts->allow_unresolved = true;
       break;
     case '?':
       if (strcmp(argv[optind - 1], "-") == 0) {
@@ -428,6 +452,7 @@ static int do_link(Vector *obj_files, Options *opts) {
   WasmLinker linker_body;
   WasmLinker *linker = &linker_body;
   linker_init(linker);
+  linker->allow_unresolved = opts->allow_unresolved;
 
   for (int i = 0; i < obj_files->len; ++i) {
     const char *objfn = obj_files->data[i];
@@ -449,6 +474,10 @@ static int do_compile(Options *opts) {
 
   for (int i = 0; i < opts->sources->len; ++i) {
     char *src = opts->sources->data[i];
+
+    // Ensure forward slashes for C compatibility
+    platform_pathslashes(src);
+
     const char *outfn = opts->ofn;
     if (src != NULL) {
       if (*src == '\0')
@@ -518,6 +547,8 @@ int main(int argc, char *argv[]) {
     .nodefaultlibs = false,
     .nostdlib = false,
     .nostdinc = false,
+    .no_entry_point = false,
+    .allow_unresolved = false,
   };
   parse_options(argc, argv, &opts);
 
@@ -538,11 +569,8 @@ int main(int argc, char *argv[]) {
   if (opts.out_type >= OutExecutable && opts.entry_point == NULL) {
     opts.entry_point = "_start";
   }
-  if (opts.entry_point != NULL && *opts.entry_point != '\0')
+  if (opts.entry_point != NULL && *opts.entry_point != '\0' && !opts.no_entry_point)
     vec_push(opts.exports, alloc_name(opts.entry_point, NULL, false));
-  if (opts.exports->len == 0 && opts.out_type >= OutExecutable) {
-    error("no exports (require -e<xxx>)\n");
-  }
 
   VERBOSES("### Exports\n");
   for (int i = 0; i < opts.exports->len; ++i) {
